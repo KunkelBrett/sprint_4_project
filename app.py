@@ -20,8 +20,6 @@ vehicles_df['date_posted'] = pd.to_datetime(vehicles_df['date_posted'])
 # Replace NaN values with 'no' and 1.0 values with 'yes' 
 vehicles_df['is_4wd'] = vehicles_df['is_4wd'].replace({1.0: 'yes', float('NaN'): 'no'})
 
-# Display results to make sure the values were replaced as intended
-vehicles_df
 
 # Defining a list of non-standard placeholders we want to check for. 
 non_standard_values = ['', 'na', 'null', 'missing']
