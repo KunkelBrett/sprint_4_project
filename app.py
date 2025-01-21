@@ -68,29 +68,62 @@ def calc_numeric_corr(x, y):
 
 # Categorical-to-categorical correlation (Cramer's V)
 def cramers_v(x, y):
-    confusion_matrix = pd.crosstab(x, y)
-    chi2, p_value, _, _ = chi2_contingency(confusion_matrix)
-    n = confusion_matrix.sum().sum()
-    return np.sqrt(chi2 / (n * (min(confusion_matrix.shape) - 1)))
+    # Drop NaN values for each column separately before performing the chi-squared test
+    valid_data = pd.concat([x, y], axis=1).dropna(subset=[x.name, y.name])
+    
+    if len(valid_data) > 0:
+        confusion_matrix = pd.crosstab(valid_data[x.name], valid_data[y.name])
+        chi2, p_value, _, _ = chi2_contingency(confusion_matrix)
+        n = confusion_matrix.sum().sum()
+        return p_value, np.sqrt(chi2 / (n * (min(confusion_matrix.shape) - 1)))
+    else:
+        return np.nan, np.nan
+    
 
 # Numeric-to-categorical correlation (ANOVA for F-statistic)
 def calc_numeric_cat_corr(numeric, categorical):
-    grouped_data = [numeric[categorical == category] for category in categorical.unique()]
-    f_statistic, p_value = f_oneway(*grouped_data)
-    return f_statistic, p_value
+    # Drop NaN values for numeric and categorical columns separately
+    valid_data = pd.concat([numeric, categorical], axis=1).dropna(subset=[numeric.name, categorical.name])
+    
+    if len(valid_data) > 0:
+        grouped_data = [valid_data[numeric.name][valid_data[categorical.name] == category] for category in categorical.unique()]
+        f_statistic, p_value = f_oneway(*grouped_data)
+        return f_statistic, p_value
+    else:
+        return np.nan, np.nan
 
 # Effect size calculation (Cohen's d for numeric)
-def cohens_d(x, y):
-    mean_x, mean_y = x.mean(), y.mean()
-    std_x, std_y = x.std(), y.std()
-    return (mean_x - mean_y) / np.sqrt((std_x**2 + std_y**2) / 2)
+def calc_omega_squared(numeric, categorical):
+    if not pd.api.types.is_numeric_dtype(numeric):
+        raise ValueError(f"The numeric variable {numeric.name} is not numeric. Please check the data type.")
+    if not pd.api.types.is_object_dtype(categorical):
+        raise ValueError(f"The categorical variable {categorical.name} is not an object (string) type. Please check the data type.")
+    
+    grouped_data = [numeric[categorical == category] for category in categorical.unique()]
+    # Calculate the sums of squares (SS)
+    # SS_between: variance explained by the group (between-groups)
+    grand_mean = np.mean(numeric)  # The grand mean of the entire numeric dataset
+    ss_between = sum(len(group) * (np.mean(group) - grand_mean)**2 for group in grouped_data)
 
+    # SS_within: within-group variance (residual variance)
+    ss_within = sum(np.sum((group - np.mean(group))**2) for group in grouped_data)
+
+    # SS_total: total variance in the data
+    ss_total = ss_between + ss_within
+
+    # Degrees of freedom (df)
+    df_between = len(grouped_data) - 1  # k - 1, where k is the number of groups
+    df_within = sum(len(group) for group in grouped_data) - len(grouped_data)  # N - k
+
+    # Calculate omega-squared
+    omega_squared = (ss_between - (df_between * ss_within / sum(len(group) for group in grouped_data))) / ss_total
+    return omega_squared
 # Step 5: Display correlation, significance, and effect size based on selection
 if show_corr:
     # Check if both selected variables are categorical
     if (vehicles_df[selected_var_1].dtype == 'object') and (vehicles_df[selected_var_2].dtype == 'object'):
         # Run Cramér's V for categorical-to-categorical correlation
-        association_measure = cramers_v(vehicles_df[selected_var_1], vehicles_df[selected_var_2])
+        association_measure, p_value = cramers_v(vehicles_df[selected_var_1], vehicles_df[selected_var_2])
         st.write(f"Association Measure (Cramer's V): {association_measure}")
     # Check if one is categorical and the other is numeric
     elif (vehicles_df[selected_var_1].dtype == 'object') and (pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])) or \
@@ -122,11 +155,17 @@ if show_significance:
         st.write("The correlation is not statistically significant.")
     
 if show_effect_size:
-    if isinstance(vehicles_df[selected_numeric_var], pd.Categorical):
-        effect_size = mutual_info_score(vehicles_df[selected_numeric_var], vehicles_df[selected_cat_var])
-    else:
-        effect_size = cohens_d(vehicles_df[selected_numeric_var], vehicles_df[selected_numeric_var])
-    st.write(f"Effect size: {effect_size}")
+    if (vehicles_df[selected_var_1].dtype == 'object') and (vehicles_df[selected_var_2].dtype == 'object'):
+        st.text("For a Cramer's V analysis the association measure is the effect size.\n Cramer's V Effect Size Guide:\n0.0 - 0.1: Weak association\n0.1 - 0.3: Small association\n0.3 - 0.5: Medium association\n0.5 - 1.0: Strong association")
+    elif (vehicles_df[selected_var_1].dtype == 'object') and (pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])):
+         omega_squared = calc_omega_squared(vehicles_df[selected_var_2], vehicles_df[selected_var_1])
+         st.text(f"Effect size (omega-squared): {omega_squared}\n\nOmega-Squared Effect Size Guide:\n0.01: Very small effect size\n0.01 - 0.06: Small effect size\n0.06 - 0.14: Medium effect size\n0.14 - 0.25: Large effect size\n> 0.25: Very large effect size")
+    elif (vehicles_df[selected_var_2].dtype == 'object') and (pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
+        omega_squared = calc_omega_squared(vehicles_df[selected_var_1], vehicles_df[selected_var_2])
+        st.text(f"Effect size (omega-squared): {omega_squared}\n\nOmega-Squared Effect Size Guide:\n0.01: Very small effect size\n0.01 - 0.06: Small effect size\n0.06 - 0.14: Medium effect size\n0.14 - 0.25: Large effect size\n> 0.25: Very large effect size")
+
+    else: 
+        st.text("For a Pearson's r analysis the correlation coefficient is the effect size.\n\nPearson's r Effect Size Guide (the values below are magnitudes which means they apply to both positive and negative correlations):\n0 - 0.1: Very small effect size\n0.1 - 0.3 Small effect size\n0.3 - 0.5: Medium effect size\n0.5 - 1.0: Large effect size") 
 
 # Step 6: Visualization
 if show_corr:
