@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from scipy.stats import pearsonr, spearmanr, f_oneway
+from scipy.stats import pearsonr, spearmanr, f_oneway, chi2_contingency
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mutual_info_score
 import itertools
@@ -43,20 +43,25 @@ numeric_columns = vehicles_df.select_dtypes(include='number').columns.tolist()
 categorical_columns = vehicles_df.select_dtypes(exclude='number').columns.tolist()
 
 # Step 3: Display the user interface (Variable selection)
-st.header("Correlation and Statistical Analysis")
-selected_numeric_var = st.selectbox("Select a numeric variable", numeric_columns)
-selected_cat_var = st.selectbox("Select a categorical variable", categorical_columns)
+st.header("Used Car Traits: Statistical Associations")
+all_columns = vehicles_df.columns.tolist()  # List of all columns (both numeric and categorical)
+
+
+# User selects the two variables to compare
+selected_var_1 = st.selectbox("Select the first variable", all_columns)
+selected_var_2 = st.selectbox("Select the second variable", all_columns)
 
 # Checkbox to show correlation
-show_corr = st.checkbox("Show correlation", value=True)
-show_significance = st.checkbox("Show statistical significance", value=True)
-show_effect_size = st.checkbox("Show effect size", value=True)
+show_corr = st.checkbox("Show correlation", value=False)
+show_significance = st.checkbox("Show statistical significance", value=False)
+show_effect_size = st.checkbox("Show effect size", value=False)
 
-# Step 4: Correlation Calculation
+# # Step 4: Correlation Calculation
 # Numeric-to-numeric correlation (Pearson's)
 def calc_numeric_corr(x, y):
     valid_data = pd.concat([x, y], axis=1).dropna()
-    if len(valid_data) > 0:
+    # Check if both variables are numeric
+    if len(valid_data) > 0 and pd.api.types.is_numeric_dtype(x) and pd.api.types.is_numeric_dtype(y):
         return pearsonr(valid_data.iloc[:, 0], valid_data.iloc[:, 1])
     else:
         return np.nan, np.nan
@@ -82,11 +87,32 @@ def cohens_d(x, y):
 
 # Step 5: Display correlation, significance, and effect size based on selection
 if show_corr:
-    if isinstance(vehicles_df[selected_numeric_var], pd.Categorical):
-        correlation = cramers_v(vehicles_df[selected_numeric_var], vehicles_df[selected_cat_var])
+    # Check if both selected variables are categorical
+    if (vehicles_df[selected_var_1].dtype == 'object') and (vehicles_df[selected_var_2].dtype == 'object'):
+        # Run Cramér's V for categorical-to-categorical correlation
+        association_measure = cramers_v(vehicles_df[selected_var_1], vehicles_df[selected_var_2])
+        st.write(f"Association Measure (Cramer's V): {association_measure}")
+    # Check if one is categorical and the other is numeric
+    elif (vehicles_df[selected_var_1].dtype == 'object') and (pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])) or \
+         (vehicles_df[selected_var_2].dtype == 'object') and (pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
+        # Run ANOVA (F-statistic) for numeric-to-categorical correlation
+        if vehicles_df[selected_var_1].dtype == 'object':
+            numeric_var = vehicles_df[selected_var_2]
+            categorical_var = vehicles_df[selected_var_1]
+        else:
+            numeric_var = vehicles_df[selected_var_1]
+            categorical_var = vehicles_df[selected_var_2]
+        
+        f_statistic, p_value = calc_numeric_cat_corr(numeric_var, categorical_var)
+        st.write(f"F-statistic (ANOVA): {f_statistic}")
+    
+    # If both are numeric, run Pearson's correlation
     else:
-        correlation, p_value = calc_numeric_corr(vehicles_df[selected_numeric_var], vehicles_df[selected_numeric_var])
-    st.write(f"Correlation: {correlation}")
+        # Run Pearson's r for numeric-to-numeric correlation
+        correlation, p_value = calc_numeric_corr(vehicles_df[selected_var_1], vehicles_df[selected_var_2])
+    # Display the correlation coefficient here
+    
+        st.write(f"Correlation (Pearson's r): {correlation}")
     
 if show_significance:
     st.write(f"P-value: {p_value}")
@@ -104,24 +130,27 @@ if show_effect_size:
 
 # Step 6: Visualization
 if show_corr:
-    if isinstance(vehicles_df[selected_numeric_var], pd.Categorical):  # Numeric-to-Categorical
-        # Box plot for Numeric-to-Categorical correlation
-        fig = px.box(vehicles_df, x=selected_cat_var, y=selected_numeric_var,
-                     title=f"Box Plot: {selected_numeric_var} vs {selected_cat_var}")
+    if (vehicles_df[selected_var_1].dtype == 'object') and (pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])):
+        fig = px.box(vehicles_df, x=selected_var_1, y=selected_var_2, 
+                     title=f"Box Plot: {selected_var_1} vs {selected_var_2}") 
+        st.plotly_chart(fig) 
+    elif (vehicles_df[selected_var_2].dtype == 'object') and (pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
+        fig = px.box(vehicles_df, x=selected_var_2, y=selected_var_1, 
+                     title=f"Box Plot: {selected_var_2} vs {selected_var_1}") 
         st.plotly_chart(fig)
-    elif isinstance(vehicles_df[selected_cat_var], pd.Categorical):  # Categorical-to-Categorical
+    elif (vehicles_df[selected_var_1].dtype == 'object') and (vehicles_df[selected_var_2].dtype == 'object'):  # Categorical-to-Categorical 
         # Histogram or Bar plot for Categorical-to-Categorical correlation
-        fig = px.histogram(vehicles_df, x=selected_numeric_var, color=selected_cat_var, 
-                            title=f"Histogram: {selected_numeric_var} by {selected_cat_var}")
+        fig = px.histogram(vehicles_df, x=selected_var_1, color=selected_var_2,  
+                            title=f"Histogram: {selected_var_1} by {selected_var_2}") 
         st.plotly_chart(fig)
     else:  # Numeric-to-Numeric (already default scatter plot)
-        fig = px.scatter(vehicles_df, x=selected_numeric_var, y=selected_cat_var,
-                         title=f"Scatter Plot: {selected_numeric_var} vs {selected_cat_var}")
+        fig = px.scatter(vehicles_df, x=selected_var_1, y=selected_var_2, 
+                         title=f"Scatter Plot: {selected_var_1} vs {selected_var_2}") 
         st.plotly_chart(fig)
 
 # Step 7: Display the correlation matrix for numeric variables
 if st.checkbox("Show correlation matrix for numeric variables"):
-    corr_matrix = vehicles_df[numeric_columns].corr()
+    corr_matrix = vehicles_df[numeric_columns].corr() 
     st.write(corr_matrix)
     fig_corr = px.imshow(corr_matrix, color_continuous_scale="RdBu_r", zmin=-1, zmax=1, 
                          title="Correlation Matrix for Numeric Variables")
