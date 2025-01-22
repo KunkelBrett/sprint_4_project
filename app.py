@@ -65,7 +65,7 @@ selected_var_1 = st.selectbox("Select the first variable", all_columns)
 selected_var_2 = st.selectbox("Select the second variable", all_columns)
 
 # Create correlation, significance, and effect size boxes for the user to check
-show_ass = st.checkbox("Show association", value=False)
+run_anal = st.checkbox("Run analysis", value=False)
 show_significance = st.checkbox("Show statistical significance", value=False)
 show_effect_size = st.checkbox("Show effect size", value=False)
 
@@ -86,6 +86,7 @@ def calc_numeric_corr(x, y):
         # Run Pearson'r analysis on all of the rows in the two columns
         # we have selected
         return pearsonr(valid_data.iloc[:, 0], valid_data.iloc[:, 1])
+
     return None
 
 
@@ -102,12 +103,9 @@ def cramers_v(x, y):
     if len(valid_data) > 0:
         # Create the confusion matrix
         confusion_matrix = pd.crosstab(valid_data[x.name], valid_data[y.name])
-        # Run chi squared analysis on the confusion matrix.
-        chi2, prob, _, _ = chi2_contingency(confusion_matrix)
-        # Calculate the total number of values in the confusion matrix
         n = confusion_matrix.sum().sum()
-        # Return a normalized chi square value (i.e. Cramer's V) and the p_value.
-        return np.sqrt(chi2 / (n * (min(confusion_matrix.shape) - 1))), prob
+        # Run chi squared analysis on the confusion matrix.
+        return chi2_contingency(confusion_matrix), n, confusion_matrix
     return None
 
 
@@ -139,9 +137,8 @@ def calc_numeric_cat_corr(numeric, categorical):
         # Compare the means of the numeric distributions for each
         # categorical variable. (i.e. calculate the f-statistic and
         # the p_value for the ANOVA)
-        stat, prob = f_oneway(*grouped_data)
+        return f_oneway(*grouped_data)
         # Return the f-statistic and the p_value
-        return stat, prob
     return None
 
 
@@ -160,9 +157,8 @@ def calc_spearman_rank_correlation(numeric, categorical):
     # p_value if there are rows left in the DataFrame after we
     # dropped the NaN values.
     if len(valid_data) > 0:
-        spearman, prob = spearmanr(
+        return spearmanr(
             valid_data.iloc[:, 0], valid_data.iloc[:, 1])
-        return spearman, prob
     return None
 
 def calc_omega_squared(numeric, categorical):
@@ -208,15 +204,15 @@ def calc_omega_squared(numeric, categorical):
         group) for group in grouped_data))) / ss_total
     # Return the omega_Squared value
     return omega_2
-# If the Show association box is checked display the relevant
+# If the run analysis box is checked display the relevant
 # association statistic
 
 # First let's initialize some variables we are going to use in our conditionals:
 categorical_var = None # pylint: disable=C0103
 numeric_var = None # pylint: disable=C0103
 
-# The below conditinoal will be met if the user clicks "Show association"
-if show_ass:
+# The below conditinoal will be met if the user clicks "Run analysis"
+if run_anal:
     # Create a conditional statement which dictates
     # that if both variables are categorical
     # association_measure and p_value equal the values
@@ -224,8 +220,9 @@ if show_ass:
     if (vehicles_df[selected_var_1].dtype == 'object') and (
         vehicles_df[selected_var_2].dtype == 'object'):
         # Run Cramér's V for categorical-to-categorical correlation
-        association_measure, p_value = cramers_v(
+        (chi2, p_value, _ , _) , total, matrix = cramers_v(
             vehicles_df[selected_var_1], vehicles_df[selected_var_2])
+        association_measure = np.sqrt(chi2 / (total * (min(matrix.shape) - 1)))
         # Display the Cramer's V statistic
         st.write(f"Association Measure (Cramer's V): {association_measure}")
     # Create a conditional statement which dictates that if one
@@ -276,10 +273,6 @@ if show_ass:
         # Display the correlation coefficient here
         st.write(f"Correlation (Pearson's r): {correlation}")
 
-# Let's initialize the p_value variable before we use it in our
-# next conditional
-p_value = None # pylint: disable=C0103
-
 # If the user checks Show significance display message regarding significance
 if show_significance:
     st.write(f"P-value: {p_value}")
@@ -291,6 +284,7 @@ if show_significance:
             '"Show effect size" box above.')
     else:
         st.write("The correlation is not statistically significant.")
+
 # If the user checks Show effect size display the effect size.
 if show_effect_size:
     # The effect size for Cramer's V is just the Craer's V statistic
@@ -349,11 +343,11 @@ if show_effect_size:
                 "size\n0.1 - 0.3 Small effect size\n0.3 - 0.5: Medium effect "
                 "size\n0.5 - 1.0: Large effect size")
 
-# If the user clicks 'Show association' present a scatter plot if
+# If the user clicks 'Run analysis' present a scatter plot if
 # both variables are numeric present a histogram if both
 # variables are categorical, and present a series of box plots
 # if one variable is numeric and the other is categorical.
-if show_ass:
+if run_anal:
     # If one variable is numeric and the other is categorical
     # persent a series of box plots
     if (vehicles_df[selected_var_1].dtype == 'object') and (
