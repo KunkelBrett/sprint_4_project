@@ -1,11 +1,11 @@
 # Used Car Traits: Statistical Associations
 Overview:
-This project provides a Streamlit-based app that allows users to explore the relationships between various used car attributes. Users can select two variables from the dataset, and the app will run the appropriate statistical tests (Pearson's correlation, Spearman's rank correlation, ANOVA, or Cramér's V) based on the types of variables selected. The app provides users with the statistical association measures, p-values, effect sizes, and visualizations to help them make informed decisions when searching for a car or analyzing used car market trends.
+this project provides a Streamlit-based app that allows users to explore the relationships between various used car attributes. Users can select two variables from the dataset, and the app will run the appropriate statistical tests (Pearson's correlation, Spearman's rank correlation, ANOVA, or Cramér's V) based on the types of variables selected. The app provides users with the statistical association measures, p-values, effect sizes, and visualizations to help them make informed decisions when searching for a car or analyzing used car market trends.
 
 
 Interactive Analysis: Users can choose two variables (numeric or categorical) and see how they are related through different statistical measures.
 The app supports the following tests:
-Pearson's r: for correlation between two numeric variables,
+Pearson's r (for correlation between two numeric variables),
 Spearman's rank correlation (specifically used when one of the variables is the ordinal categorical variable 'cylinders'),
 ANOVA (to compare the means of a numeric variable across different categories in a categorical variable), and
 Cramér's V (to measure the association between two categorical variables).
@@ -18,14 +18,13 @@ histograms for categorical-to-categorical relationships.
 
 Users can view a correlation matrix for numeric variables to quickly assess the relationships between multiple numeric columns.
 The app analyzes a dataset of used cars (contained in vehicles_us.csv). The dataset contains various features of used cars, including but not limited to:
-
-Manufacturer
-Model
-Price
-Year
-Mileage
-Engine size
-Number of cylinders (categorical: ordinal variable)
+Manufacturer,
+Model,
+Price,
+Year,
+Mileage,
+Engine size,
+Number of cylinders, and
 4WD status (yes/no)
 
 
@@ -35,7 +34,6 @@ Some data preprocessing has been done to handle missing or non-standard values. 
 An initial exploratory data analysis (EDA) was conducted to better understand the dataset. This was done without interactivity, providing a brief overview of the data's characteristics and relationships between its variables.
 
 The EDA included:
-
 Summary statistics of numeric and categorical columns.
 Visualizations of the distributions of key variables (e.g., price, mileage, etc.).
 Identification of missing values and non-standard placeholders.
@@ -48,10 +46,9 @@ To run the app locally, follow these steps:
 Clone this repository:
 
 git clone https://github.com/KunkelBrett/sprint_4_project
-Navigate to the project directory:
 
 
-after cloning the repository move into the project directory
+After cloning the repository move into the project directory
 using
 "cd sprint_4_project"
 
