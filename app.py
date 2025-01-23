@@ -26,10 +26,27 @@ except FileNotFoundError:
         # Set to None or handle appropriately
         vehicles_df = None # pylint: disable=C0103
 
-
 # Convert date_posted' to datetime data type.
 vehicles_df['date_posted'] = pd.to_datetime(vehicles_df['date_posted'])
 
+# Create a function to determine the season based on the month.
+def get_season(month):
+    if month in [12, 1, 2]:
+        return 'Winter'
+    elif month in [3, 4, 5]:
+        return 'Spring'
+    elif month in [6, 7, 8]:
+        return 'Summer'
+    else:
+        return 'Fall'
+
+# Create the 'season_posted' column by running the values of
+# 'date_posted' through the get_season function with .apply().
+vehicles_df['season_posted'] = vehicles_df['date_posted'].dt.month.apply(get_season)
+
+# Now that we have created the 'season_posted' column we can convert the
+# date_posted column back to an int datatye for our correlation analysis
+vehicles_df['date_posted'] = vehicles_df['date_posted'].astype('int64')
 
 # In our preliminary EDA for this project we verified that there were only 1.0 and NaN values in the
 # is_4wd column. The most reasonable interpretation of this is that 1.0 means yes and NaN means no
@@ -84,11 +101,12 @@ def calc_numeric_corr(x: pd.Series, y: pd.Series) -> tuple[float, float]:
     """We are defining this function to calculate the Pearson's r correlation
     between two numeric variables. Later we will call this function following the
     conditional if statement that the user choose two numeric variables."""
-    # concatinate the input variables (i.e. columns) and drop the NaN values from them.
+     # concatinate the input variables (i.e. columns) and drop the NaN values from them.
     # As with the EDA, dropping the NaN values this way will prevent us from having to
     # unnecessarily drop values just because another variable happened to have an
     # NaN value in that same row. Therefore, we will have more data points to
     # analyze and more robust results.
+    # Convert datetime columns to numeric timestamps if needed
     valid_data = pd.concat([x, y], axis=1).dropna()
     # Check if both variables are numeric
     if (len(valid_data) > 0) and (pd.api.types.is_numeric_dtype(x)) and (
@@ -96,7 +114,6 @@ def calc_numeric_corr(x: pd.Series, y: pd.Series) -> tuple[float, float]:
         # Run Pearson'r analysis on all of the rows in the two columns
         # we have selected
         return pearsonr(valid_data.iloc[:, 0], valid_data.iloc[:, 1])
-
     return None
 
 
