@@ -75,7 +75,7 @@ Each of the above is contained in the requirements.txt file. However, If you wan
 - statsmodels.formula.api
 
 ### App Demo
-Try the app for yourself here: https://sprint-4-project-16.onrender.com/
+Try the app for yourself here: https://sprint-4-project-17.onrender.com/
 Start by choosing two variables from the dataset. Then, click the "Run analysis" checkbox to run the statistical test, and the app will display the correlation coefficient (or test statistic), along with a plot. The type of plot that is displayed will be determined by the vairable type you selected. If you want to check wheter or not results were statistically significant click "Show statistical significance" and the app will display the p-value along with a statement about whether or not the results were statistically siginificant and how to interpret them. If you want to see the effect size click "Show effect size."
 
 For example, if you choose:
