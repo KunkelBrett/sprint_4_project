@@ -15,7 +15,14 @@ import plotly.express as px
 from scipy.stats import pearsonr, spearmanr, f_oneway, chi2_contingency
 
 # Load the data set as a DataFrame
-vehicles_df = pd.read_csv(r'C:\Users\brttk\Documents\sprint_4_project\notebooks\vehicles_us.csv')
+try:
+    vehicles_df = pd.read_csv(r'C:\Users\brttk\Documents\sprint_4_project\notebooks\vehicles_us.csv')
+except FileNotFoundError:
+    try:
+        vehicles_df = pd.read_csv(r'./notebooks/vehicles_us.csv')
+    except FileNotFoundError:
+        print("Error: The file was not found in either path.")
+        vehicles_df = None  # Set to None or handle appropriately
 
 # Convert date_posted' to datetime data type.
 vehicles_df['date_posted'] = pd.to_datetime(vehicles_df['date_posted'])
@@ -360,7 +367,7 @@ if show_effect_size & run_anal:
                 "size\n0.1 - 0.3 Small effect size\n0.3 - 0.5: Medium effect "
                 "size\n0.5 - 1.0: Large effect size")
 
-if show_effect_size & ~run_anal:
+if show_effect_size and not run_anal:
     st.text(
         "Neither statistical significance nor effect sizes can "
         "be presented until an analysis is run."
