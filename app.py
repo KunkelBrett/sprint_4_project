@@ -16,13 +16,16 @@ from scipy.stats import pearsonr, spearmanr, f_oneway, chi2_contingency
 
 # Load the data set as a DataFrame
 try:
-    vehicles_df = pd.read_csv(r'C:\Users\brttk\Documents\sprint_4_project\notebooks\vehicles_us.csv')
+    vehicles_df = pd.read_csv(
+        r'C:\Users\brttk\Documents\sprint_4_project\notebooks\vehicles_us.csv')
 except FileNotFoundError:
     try:
         vehicles_df = pd.read_csv(r'./notebooks/vehicles_us.csv')
     except FileNotFoundError:
         print("Error: The file was not found in either path.")
-        vehicles_df = None  # Set to None or handle appropriately
+        # Set to None or handle appropriately
+        vehicles_df = None # pylint: disable=C0103
+
 
 # Convert date_posted' to datetime data type.
 vehicles_df['date_posted'] = pd.to_datetime(vehicles_df['date_posted'])
@@ -223,6 +226,7 @@ numeric_var = None # pylint: disable=C0103
 
 # The below conditinoal will be met if the user clicks "Run analysis"
 if run_anal:
+    # Present a message while the calculation is taking place (in case it moves slow)
     with st.spinner('Running analysis...'):
         # Create a conditional statement which dictates
         # that if both variables are categorical
@@ -286,7 +290,15 @@ if run_anal:
 
 # If the user checks Show significance display message regarding significance
 if show_significance:
+    # Present a message while the calculation is taking place (in case it moves slow)
     with st.spinner('Calculating p-value and comparing it to significance threshold...'):
+        # In case the user clicks "Show statistical significance"
+        # before they click on "Run analysis" we don't
+        # want the app to present a NameError message because
+        # p_value has not been assigned a vlaue yet.
+        # Therefore, we will use this try and except block to
+        # to tell the user they need to click on "Run analysis"
+        # before they click on "Show statistical significance"
         try:
             st.write(f"P-value: {p_value}") # pylint: disable=possibly-used-before-assignment
                                             # pylint will flag this line because p_value
@@ -301,6 +313,8 @@ if show_significance:
                     '"Show effect size" box above.')
             else:
                 st.write("The correlation is not statistically significant.")
+        # Print a message if the user clicks "Show statistical significance"
+        # without clicking "Run analysis"
         except NameError as e:
             # This block will run if a ValueError is raised
             st.text(
@@ -310,6 +324,7 @@ if show_significance:
 
 # If the user checks Show effect size display the effect size.
 if show_effect_size & run_anal:
+    # Present a message while the calculation is taking place (in case it moves slow)
     with st.spinner('Calculating effect size...'):
         # The effect size for Cramer's V is just the Craer's V statistic
         if (vehicles_df[selected_var_1].dtype == 'object') and (
