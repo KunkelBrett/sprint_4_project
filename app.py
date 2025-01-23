@@ -70,7 +70,7 @@ show_significance = st.checkbox("Show statistical significance", value=False)
 show_effect_size = st.checkbox("Show effect size", value=False)
 
 
-def calc_numeric_corr(x, y):
+def calc_numeric_corr(x: pd.Series, y: pd.Series) -> tuple[float, float]:
     """We are defining this function to calculate the Pearson's r correlation
     between two numeric variables. Later we will call this function following the
     conditional if statement that the user choose two numeric variables."""
@@ -90,7 +90,9 @@ def calc_numeric_corr(x, y):
     return None
 
 
-def cramers_v(x, y):
+def cramers_v(
+        x: pd.Series,
+        y: pd.Series) -> tuple[tuple[float, float, int, float], int, pd.DataFrame]:
     """We are defining the below function to define a Cramer's V calculation.
     Thus function will be activated when the user selects two categorical
     variables to compare. Therefore, we will call the function following
@@ -110,7 +112,7 @@ def cramers_v(x, y):
 
 
 
-def calc_numeric_cat_corr(numeric, categorical):
+def calc_numeric_cat_corr(numeric: pd.Series, categorical: pd.Series) -> tuple[float, float]:
     """We are defining the function below to run an ANOVA analysis
     when the user selects a numeric variable and a categorical variable to
     compare. Later, we will call this function following a conditional statement
@@ -142,7 +144,8 @@ def calc_numeric_cat_corr(numeric, categorical):
     return None
 
 
-def calc_spearman_rank_correlation(numeric, categorical):
+def calc_spearman_rank_correlation(
+        numeric: pd.Series, categorical: pd.Series) -> tuple[float, float]:
     """We are giong to define a spearman rank function because cylinders is an ordinal
     categorical variable, which means its relationship to numeric variables
     should be analyzed with a Spearman's r correlation. Later will we will call this
@@ -161,7 +164,7 @@ def calc_spearman_rank_correlation(numeric, categorical):
             valid_data.iloc[:, 0], valid_data.iloc[:, 1])
     return None
 
-def calc_omega_squared(numeric, categorical):
+def calc_omega_squared(numeric: pd.Series, categorical: pd.Series) -> float:
     """We are defining the function to calculate the omega squared statistic
     for our ANOVA analyses. Omega squared can be thought of as the effect size
     for an ANOVA. Since our data set is so large, statistical significance may
@@ -213,135 +216,156 @@ numeric_var = None # pylint: disable=C0103
 
 # The below conditinoal will be met if the user clicks "Run analysis"
 if run_anal:
-    # Create a conditional statement which dictates
-    # that if both variables are categorical
-    # association_measure and p_value equal the values
-    # returned by the cramers_v() function
-    if (vehicles_df[selected_var_1].dtype == 'object') and (
-        vehicles_df[selected_var_2].dtype == 'object'):
-        # Run Cramér's V for categorical-to-categorical correlation
-        (chi2, p_value, _ , _) , total, matrix = cramers_v(
-            vehicles_df[selected_var_1], vehicles_df[selected_var_2])
-        association_measure = np.sqrt(chi2 / (total * (min(matrix.shape) - 1)))
-        # Display the Cramer's V statistic
-        st.write(f"Association Measure (Cramer's V): {association_measure}")
-    # Create a conditional statement which dictates that if one
-    # variable is numeric and the other is categorical
-    # the program will assign the numeric variable to
-    # numeric_var and it will assign the categorical
-    # variable to categorical_var and then it will assign f_statistic
-    # and p_value the values returned by the calc_numeric_cat_corr() function.
-    elif (vehicles_df[selected_var_1].dtype == 'object') and (
-        pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])) or \
-         (vehicles_df[selected_var_2].dtype == 'object') and (
+    with st.spinner('Running analysis...'):
+        # Create a conditional statement which dictates
+        # that if both variables are categorical
+        # association_measure and p_value equal the values
+        # returned by the cramers_v() function
+        if (vehicles_df[selected_var_1].dtype == 'object') and (
+                vehicles_df[selected_var_2].dtype == 'object'):
+            # Run Cramér's V for categorical-to-categorical correlation
+            (chi2, p_value, _ , _) , total, matrix = cramers_v(
+                vehicles_df[selected_var_1], vehicles_df[selected_var_2])
+            association_measure = np.sqrt(chi2 / (total * (min(matrix.shape) - 1)))
+            # Display the Cramer's V statistic
+            st.write(f"Association Measure (Cramer's V): {association_measure}")
+        # Create a conditional statement which dictates that if one
+        # variable is numeric and the other is categorical
+        # the program will assign the numeric variable to
+        # numeric_var and it will assign the categorical
+        # variable to categorical_var and then it will assign f_statistic
+        # and p_value the values returned by the calc_numeric_cat_corr() function.
+        elif (vehicles_df[selected_var_1].dtype == 'object') and (
+                pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])) or \
+                (vehicles_df[selected_var_2].dtype == 'object') and (
             pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
-        # Assign the numeric variable to numeric_Var and the categorical variable
-        # to categorical_var
-        if vehicles_df[selected_var_1].dtype == 'object':
-            numeric_var = vehicles_df[selected_var_2]
-            categorical_var = vehicles_df[selected_var_1]
-        elif vehicles_df[selected_var_2].dtype == 'object':
-            numeric_var = vehicles_df[selected_var_1]
-            categorical_var = vehicles_df[selected_var_2]
-        # Since 'cylinders is an ordinal categorical vairable the proepr analysis
-        # for its relationship to numeric variables is a Spearman's
-        # r correlation analysis. Create a conditional statement
-        # that runs a Spearman's r correlation if the user
-        # selections 'cylinders' with a numeric variable.
-        if (categorical_var.name == 'cylinders') and (
-            pd.api.types.is_numeric_dtype(numeric_var)):
-            # Call the function to calculate Spearman's
-            # correlation for 'cylinders'
-            spearman_r, p_value = calc_spearman_rank_correlation(
-                numeric_var, categorical_var)
-            st.write(f"Spearman Rank: {spearman_r}")
+            # Assign the numeric variable to numeric_Var and the categorical variable
+            # to categorical_var
+            if vehicles_df[selected_var_1].dtype == 'object':
+                numeric_var = vehicles_df[selected_var_2]
+                categorical_var = vehicles_df[selected_var_1]
+            elif vehicles_df[selected_var_2].dtype == 'object':
+                numeric_var = vehicles_df[selected_var_1]
+                categorical_var = vehicles_df[selected_var_2]
+            # Since 'cylinders is an ordinal categorical vairable the proepr analysis
+            # for its relationship to numeric variables is a Spearman's
+            # r correlation analysis. Create a conditional statement
+            # that runs a Spearman's r correlation if the user
+            # selections 'cylinders' with a numeric variable.
+            if (categorical_var.name == 'cylinders') and (
+                    pd.api.types.is_numeric_dtype(numeric_var)):
+                # Call the function to calculate Spearman's
+                # correlation for 'cylinders'
+                spearman_r, p_value = calc_spearman_rank_correlation(
+                    numeric_var, categorical_var)
+                st.write(f"Spearman Rank: {spearman_r}")
+            else:
+                # Assign the output of calc_numeric_Cat_Corr()
+                # functin to f_statistic and p_value
+                f_statistic, p_value = calc_numeric_cat_corr(
+                    numeric_var, categorical_var)
+                # Display the f-statistic
+                st.write(f"F-statistic (ANOVA): {f_statistic}")
+
+        # Leftover conditional dictates that we run Pearson's correlation because both
+        # variabels are numeric.
         else:
-            # Assign the output of calc_numeric_Cat_Corr()
-            # functin to f_statistic and p_value
-            f_statistic, p_value = calc_numeric_cat_corr(
-                numeric_var, categorical_var)
-            # Display the f-statistic
-            st.write(f"F-statistic (ANOVA): {f_statistic}")
+            # Assign output of calc_numeric_corr() function to correlation and p_value
+            correlation, p_value = calc_numeric_corr(
+                vehicles_df[selected_var_1], vehicles_df[selected_var_2])
 
-    # Leftover conditional dictates that we run Pearson's correlation because both
-    # variabels are numeric.
-    else:
-        # Assign output of calc_numeric_corr() function to correlation and p_value
-        correlation, p_value = calc_numeric_corr(
-            vehicles_df[selected_var_1], vehicles_df[selected_var_2])
-
-        # Display the correlation coefficient here
-        st.write(f"Correlation (Pearson's r): {correlation}")
+            # Display the correlation coefficient here
+            st.write(f"Correlation (Pearson's r): {correlation}")
 
 # If the user checks Show significance display message regarding significance
 if show_significance:
-    st.write(f"P-value: {p_value}")
-    if p_value < 0.001:
-        st.text('The relationship is statistically significant. '
-            'However, for a data set this large a result can be statistically '
-            'significant without there being a meaningful effect. If you want '
-            'to confirm that the effect was meaningful check the '
-            '"Show effect size" box above.')
-    else:
-        st.write("The correlation is not statistically significant.")
+    with st.spinner('Calculating p-value and comparing it to significance threshold...'):
+        try:
+            st.write(f"P-value: {p_value}") # pylint: disable=possibly-used-before-assignment
+                                            # pylint will flag this line because p_value
+                                            # could be used before assignment
+                                            # However, we have addressed this
+                                            # with a try and except block
+            if p_value < 0.001:
+                st.text('The relationship is statistically significant. '
+                    'However, for a data set this large a result can be statistically '
+                    'significant without there being a meaningful effect. If you want '
+                    'to confirm that the effect was meaningful check the '
+                    '"Show effect size" box above.')
+            else:
+                st.write("The correlation is not statistically significant.")
+        except NameError as e:
+            # This block will run if a ValueError is raised
+            st.text(
+                "Neither statistical significance nor effect "
+                "sizes can be presented until an analysis is run."
+                "\nPlease check 'Run analysis' above.")
 
 # If the user checks Show effect size display the effect size.
-if show_effect_size:
-    # The effect size for Cramer's V is just the Craer's V statistic
-    if (vehicles_df[selected_var_1].dtype == 'object') and (
-        vehicles_df[selected_var_2].dtype == 'object'):
-        st.text("For a Cramer's V analysis the association measure is "
+if show_effect_size & run_anal:
+    with st.spinner('Calculating effect size...'):
+        # The effect size for Cramer's V is just the Craer's V statistic
+        if (vehicles_df[selected_var_1].dtype == 'object') and (
+                vehicles_df[selected_var_2].dtype == 'object'):
+            st.text("For a Cramer's V analysis the association measure is "
                 "the effect size.\n Cramer's V Effect Size Guide:\n0.0 - 0.1: Weak "
                 "association\n0.1 - 0.3: Small association\n0.3 - 0.5: "
                 "Medium association\n0.5 - 1.0: Strong association")
-    # The effect size for Spearman's r is just the correlation coefficient
-    if (vehicles_df[selected_var_1].name == 'cylinders') and (
-        pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])):
-        st.text("For a Spearman's r analysis the effect size is the "
+        # The effect size for Spearman's r is just the correlation coefficient
+        if (vehicles_df[selected_var_1].name == 'cylinders') and (
+                pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])):
+            st.text("For a Spearman's r analysis the effect size is the "
                 "correlation coefficient.\n\nSpearman's r effect Size "
                 "Guide:\n0.0 - 0.1: Weak to no relationship\n0.1 - 0.3: "
                 "Weak relationship\n0.3 - 0.5: Moderate relationship\n0.5 - 0.7: "
                 "Strong relationship\n0.7 - 0.9: Very strong relationship")
-    if (vehicles_df[selected_var_2].name == 'cylinders') and (
-        pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
-        st.text("For a Spearman's r analysis the effect size is the correlation "
+        if (vehicles_df[selected_var_2].name == 'cylinders') and (
+                pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
+            st.text("For a Spearman's r analysis the effect size is the correlation "
                 "coefficient.\n\nSpearman's r effect Size Guide:\n0.0 - 0.1: Weak "
                 "to no relationship\n0.1 - 0.3: Weak relationship\n0.3 - 0.5: "
                 "Moderate relationship\n0.5 - 0.7: Strong relationship\n0.7 - "
                 "0.9: Very strong relationship")
-    # Display effect size for the ANOVA test
-    elif (vehicles_df[selected_var_1].dtype == 'object') and (
-        vehicles_df[selected_var_1].name != 'cylinders') and (
-            pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])):
-        omega_squared = calc_omega_squared(
-             vehicles_df[selected_var_2], vehicles_df[selected_var_1])
-        st.text(
-             f"Effect size (omega-squared): {omega_squared}"
-             "\n\nOmega-Squared Effect Size Guide:\n0.01: "
-             "Very small effect size\n0.01 - 0.06: Small effect "
-             "size\n0.06 - 0.14: Medium effect size\n0.14 - 0.25: "
-             "Large effect size\n> 0.25: Very large effect size")
-    elif (vehicles_df[selected_var_2].dtype == 'object') and (
-        vehicles_df[selected_var_2].name != 'cylinders') and (
-            pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
-        omega_squared = calc_omega_squared(
-            vehicles_df[selected_var_1], vehicles_df[selected_var_2])
-        st.text("Effect size (omega-squared): "
+        # Display effect size for the ANOVA test
+        elif (vehicles_df[selected_var_1].dtype == 'object') and (
+                vehicles_df[selected_var_1].name != 'cylinders') and (
+                pd.api.types.is_numeric_dtype(vehicles_df[selected_var_2])):
+            omega_squared = calc_omega_squared(
+                 vehicles_df[selected_var_2], vehicles_df[selected_var_1])
+            st.text(
+                   f"Effect size (omega-squared): {omega_squared}"
+                   "\n\nOmega-Squared Effect Size Guide:\n0.01: "
+                   "Very small effect size\n0.01 - 0.06: Small effect "
+                   "size\n0.06 - 0.14: Medium effect size\n0.14 - 0.25: "
+                   "Large effect size\n> 0.25: Very large effect size")
+        elif (vehicles_df[selected_var_2].dtype == 'object') and (
+                vehicles_df[selected_var_2].name != 'cylinders') and (
+                pd.api.types.is_numeric_dtype(vehicles_df[selected_var_1])):
+            omega_squared = calc_omega_squared(
+                vehicles_df[selected_var_1], vehicles_df[selected_var_2])
+            st.text("Effect size (omega-squared): "
                 f"{omega_squared}\n\nOmega-Squared Effect Size "
                 "Guide:\n0.01: Very small effect size\n0.01 - 0.06: "
                 "Small effect size\n0.06 - 0.14: Medium effect size\n0.14 "
                 "- 0.25: Large effect size\n> 0.25: Very large effect size")
-    elif (vehicles_df[selected_var_1].dtype != 'object') and (
-        vehicles_df[selected_var_2].dtype != 'object'):
-        # The effect size for a pearson's r analysis is just
-        # the pearson's r correlation coefficient.
-        st.text("For a Pearson's r analysis the "
+        elif (vehicles_df[selected_var_1].dtype != 'object') and (
+                vehicles_df[selected_var_2].dtype != 'object'):
+                # The effect size for a pearson's r analysis is just
+                # the pearson's r correlation coefficient.
+            st.text("For a Pearson's r analysis the "
                 "correlation coefficient is the effect size. "
                 "\n\nPearson's r Effect Size Guide (the values below "
                 "are magnitudes which means they apply to both positive "
                 "and negative correlations):\n0 - 0.1: Very small effect "
                 "size\n0.1 - 0.3 Small effect size\n0.3 - 0.5: Medium effect "
                 "size\n0.5 - 1.0: Large effect size")
+
+if show_effect_size & ~run_anal:
+    st.text(
+        "Neither statistical significance nor effect sizes can "
+        "be presented until an analysis is run."
+                "\nPlease check 'Run analysis' above.")
+
 
 # If the user clicks 'Run analysis' present a scatter plot if
 # both variables are numeric present a histogram if both
@@ -376,8 +400,9 @@ if run_anal:
 
 # Step 7: Display the correlation matrix for numeric variables
 if st.checkbox("Show correlation matrix for numeric variables"):
-    corr_matrix = vehicles_df[numeric_columns].corr()
-    st.write(corr_matrix)
-    fig_corr = px.imshow(corr_matrix, color_continuous_scale="RdBu_r", zmin=-1, zmax=1,
+    with st.spinner('Calculating correlation matrix...'):
+        corr_matrix = vehicles_df[numeric_columns].corr()
+        st.write(corr_matrix)
+        fig_corr = px.imshow(corr_matrix, color_continuous_scale="RdBu_r", zmin=-1, zmax=1,
                          title="Correlation Matrix for Numeric Variables")
-    st.plotly_chart(fig_corr)
+        st.plotly_chart(fig_corr)
