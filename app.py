@@ -323,7 +323,7 @@ if show_significance:
                 "\nPlease check 'Run analysis' above.")
 
 # If the user checks Show effect size display the effect size.
-if show_effect_size & run_anal:
+if show_effect_size and run_anal:
     # Present a message while the calculation is taking place (in case it moves slow)
     with st.spinner('Calculating effect size...'):
         # The effect size for Cramer's V is just the Craer's V statistic
